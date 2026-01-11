@@ -6,6 +6,8 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 WHITE = (255, 255, 255)
 SKY_BLUE = (135, 206, 235)
+PLAYER_HEIGHT = 32
+PLAYER_WIDTH = 32
 
 #Setup pygame
 pygame.init()
@@ -47,11 +49,12 @@ while running:
         velocity = 1
 
     #Player Boundarys
-    if player_y >= 600:
-        player_y = 600
-    elif player_y <= 0:
+    if player_y >= SCREEN_HEIGHT - PLAYER_HEIGHT and keypress != pygame.K_DOWN:
+        player_y = SCREEN_HEIGHT - PLAYER_HEIGHT
+        velocity = 1
+    if player_y <= 0:
         player_y = 0
-
+        velocity = 1
     #Rendering
     player_rect.topleft = (player_x, player_y)
     screen.blit(player, player_rect)
