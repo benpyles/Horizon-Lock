@@ -39,12 +39,18 @@ while running:
     keypress = pygame.key.get_pressed()
     if keypress[pygame.K_UP]:
         player_y -= velocity
-        velocity += 1
+        velocity += 0.5
     elif keypress[pygame.K_DOWN]:
         player_y += velocity
-        velocity += 1
+        velocity += 0.5
     else:
         velocity = 1
+
+    #Player Boundarys
+    if player_y >= 600:
+        player_y = 600
+    elif player_y <= 0:
+        player_y = 0
 
     #Rendering
     player_rect.topleft = (player_x, player_y)
