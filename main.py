@@ -27,6 +27,8 @@ player_rect = player.get_rect()
 player_rect.topleft = (player_x, player_y)
 
 async def main():
+    global SCREEN_HEIGHT, SCREEN_WIDTH, WHITE, SKY_BLUE, PLAYER_HEIGHT, PLAYER_WIDTH, screen, clock, running, player_x, player_y, velocity, player, player_rect
+
     #Game loop
     while running:   
         #Handles quiting
