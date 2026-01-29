@@ -137,7 +137,6 @@ async def main():
             
         if game_state == "settings":
             print("settings")
-            
 
         if game_state == "playing":
             menu_music_playing = False
