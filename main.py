@@ -111,8 +111,9 @@ class Menu:
 
 class GameOver:
 #Ui loading
-    def __init__(self):
-        self.button_gap = 20
+    def __init__(self): 
+        self.button_gap = 10
+        self.button_gap_hover = 10
         self._load_buttons()
         self._load_backgrounds()
         self.menu_scroll = 0
@@ -128,8 +129,8 @@ class GameOver:
         self.play_again_button_rect = self.play_again_button_scaled.get_rect()
         self.play_again_button_hover = pygame.transform.scale(pygame.image.load("Assets/Ui/GameOver/PlayAgainHover.png"), (250, 3750/67)).convert_alpha()
         self.play_again_button_hover_rect = self.play_again_button_hover.get_rect()
-        self.play_again_button_rect.topleft = (GameConfig.SCREEN_WIDTH / 2 - self.play_again_button_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.play_again_button_rect.height)
-        self.play_again_button_hover_rect.topleft = (GameConfig.SCREEN_WIDTH / 2 - self.play_again_button_hover_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.play_again_button_rect.height)
+        self.play_again_button_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 - self.play_again_button_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.play_again_button_rect.height / 2 - self.button_gap)
+        self.play_again_button_hover_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 - self.play_again_button_hover_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.play_again_button_rect.height / 2 - self.button_gap_hover)
 
         #Achievements button
         self.main_menu_button = pygame.image.load("Assets/Ui/GameOver/MainMenu.png").convert_alpha()
@@ -137,8 +138,23 @@ class GameOver:
         self.main_menu_button_rect = self.main_menu_button_scaled.get_rect()
         self.main_menu_button_hover = pygame.transform.scale(pygame.image.load("Assets/Ui/GameOver/MainMenuHover.png"), (250, 3750/67)).convert_alpha()
         self.main_menu_button_hover_rect = self.main_menu_button_hover.get_rect()
-        self.main_menu_button_rect.topleft = (GameConfig.SCREEN_WIDTH / 2 - self.main_menu_button_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.main_menu_button_rect.height - self.button_gap)
-        self.main_menu_button_hover_rect.topleft = (GameConfig.SCREEN_WIDTH / 2 - self.main_menu_button_hover_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 - self.main_menu_button_rect.height - self.button_gap)
+        self.main_menu_button_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 -self.main_menu_button_rect.width / 2,  GameConfig.SCREEN_HEIGHT / 2 + self.play_again_button_rect.height /2 + self.button_gap)
+        self.main_menu_button_hover_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 -self.main_menu_button_hover_rect.width / 2, GameConfig.SCREEN_HEIGHT / 2 + self.main_menu_button_rect.height / 2 + self.button_gap_hover)
+
+        #Score Button
+        self.score_button = pygame.image.load("Assets/Ui/GameOver/ScoreButton.png").convert_alpha()
+        self.score_button_scaled = pygame.transform.scale(self.score_button, (250, 3750/67))
+        self.score_button_rect = self.score_button_scaled.get_rect()
+        self.score_button_hover = pygame.transform.scale(pygame.image.load("Assets/Ui/GameOver/ScoreButtonHover.png"), (250, 3750/67)).convert_alpha()
+        self.score_button_hover_rect = self.score_button_hover.get_rect()
+        self.score_button_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 - self.score_button_rect.width / 2, self.play_again_button_rect.top - self.button_gap * 2)
+        self.score_button_hover_rect.bottomleft = (GameConfig.SCREEN_WIDTH / 2 -self.score_button_hover_rect.width / 2, self.play_again_button_hover_rect.top - self.button_gap_hover * 2)
+        self.final_score_font = pygame.font.Font("./Assets/Fonts/CabinSketch-Bold.ttf", 28)
+
+    def display_score(self, screen, current_score):
+        score_surface = self.final_score_font.render(str(current_score), True, GameConfig.BLACK)
+        score_rect = score_surface.get_rect(midright=(self.score_button_rect.right - 25, self.score_button_rect.centery))
+        screen.blit(score_surface, score_rect)
 
     def _load_backgrounds(self):
         #Loading bg images/ assets
@@ -220,11 +236,14 @@ async def main():
     #Main game loop
     while running:
 
+        click = False
         #Handles exiting
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    click = True
         #Menu game state
         if game_state.current_screen == "menu":
 
@@ -252,6 +271,7 @@ async def main():
                 screen.blit(menu.play_button_hover, menu.play_button_hover_rect)
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     print("Clicked")
+                    game_state.score = 0
                     game_state.current_screen = "playing"
             else:
                 screen.blit(menu.play_button_scaled, menu.play_button_rect)
@@ -304,21 +324,27 @@ async def main():
             #Play button hover and click detection / animation
             if game_over.play_again_button_rect.collidepoint(pygame.mouse.get_pos()):
                 screen.blit(game_over.play_again_button_hover, game_over.play_again_button_hover_rect)
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                if click:
                     print("Clicked")
+                    game_state.score = 0
                     game_state.current_screen = "playing"
                     Music.game_over_music_playing = False
             else:
                 screen.blit(game_over.play_again_button_scaled, game_over.play_again_button_rect)
             
             if game_over.main_menu_button_rect.collidepoint(pygame.mouse.get_pos()):
-                screen.blit(game_over.main_menu_button_hover, game_over.play_again_button_hover_rect)
+                screen.blit(game_over.main_menu_button_hover, game_over.main_menu_button_hover_rect)
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    game_state.current_screen = "menu"
                     Music.game_over_music_playing = False
+                    game_state.score = 0
                     Music.game_over_music.fadeout(1000)
+                    game_state.current_screen = "menu"
             else:
-                screen.blit(game_over.main_menu_button_scaled, game_over.play_again_button_rect)
+                screen.blit(game_over.main_menu_button_scaled, game_over.main_menu_button_rect)
+            screen.blit(game_over.score_button_scaled, game_over.score_button_rect)
+            #screen.blit(game_over.score, (400, 200)
+            game_over.display_score(screen, game_state.score)
+
 
         #Settings game state
         if game_state.current_screen == "settings":
@@ -363,7 +389,7 @@ async def main():
                 game_state.biome = random.randint(1,2)
 
             #Spawns new obstacle if its been more than 500 ticks
-            if current_time - last_obstacle_spawn_time > 500:
+            if current_time - last_obstacle_spawn_time > 400:
                 if game_state.biome == 1:
                     current_list = grass_obstacles
                 else:
@@ -417,7 +443,7 @@ async def main():
             dt = (current_time - game_state.last_time)
             game_state.last_time = current_time
             game_state.score += dt
-            score_text = game_state.score_font.render(str(game_state.score), True, GameConfig.BLACK )
+            score_text = game_over.final_score_font.render(str(game_state.score), True, GameConfig.BLACK )
             score_text_rect = score_text.get_rect()
             score_text_rect.topleft = (590 - score_text_rect.width, 5)
             screen.blit(score_text, score_text_rect)
@@ -430,4 +456,4 @@ async def main():
 
     pygame.quit()
 if __name__ == "__main__":
-    asyncio.run(main())
+   asyncio.run(main())
