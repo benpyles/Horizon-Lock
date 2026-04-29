@@ -1,6 +1,5 @@
 #Import modules
-import pygame, asyncio, random
-import math
+import pygame, asyncio, random, math, platform
 
 #Setting up audio clock and pygame window
 pygame.mixer.pre_init(44100, -16, 2, 512)
@@ -29,6 +28,7 @@ class GameState:
         self.score = 0
         self.last_time = pygame.time.get_ticks()
         self.reset_score = True
+        self.shake_intensity = 0
 
         #Main game background
         self.scroll = 0
@@ -240,24 +240,47 @@ class InputManager:
     def __init__(self):
         self.move_left = False
         self.move_right = False
-        self.target_x = None
-    def update_from_keyboard(self):
+        self.target_x = GameConfig.SCREEN_WIDTH / 2
+        self.is_web = platform.system() == 'Emscripten'
+
+    def update_from_keyboard(self, game_state):
         keys = pygame.key.get_pressed()
         self.move_left = keys[pygame.K_LEFT]
         self.move_right = keys[pygame.K_RIGHT]
+
     
-    def update_from_mediapipe(self, normalized_x):
-        self.target_x = normalized_x * GameConfig.SCREEN_WIDTH
-    
+    def update_from_mediapipe(self, game_state):
+        if not self.is_web:
+            return 
+        try:
+            import js
+            raw_x = js.window.handX
+            if hasattr(js.window, 'handX'):
+                if raw_x is not None:
+                    self.target_x = (1.0 - raw_x) * GameConfig.SCREEN_WIDTH
+                    lerp_speed = 0.2
+                    game_state.player_x += (self.target_x - game_state.player_x) * lerp_speed
+        except Exception as e:
+            pass 
 
 #Menu music
 class Music:
-    menu_music = pygame.mixer.Sound("./Assets/Music/MenuMusic1.ogg")
-    menu_music_playing = False
-    game_music = pygame.mixer.Sound("./Assets/Music/GameMusic.ogg")
-    game_music_playing = False
-    game_over_music_playing = False
-    game_over_music = pygame.mixer.Sound("./Assets/Music/GameOver.ogg")
+    MENU_TRACK = "./Assets/Music/MenuMusic.ogg"
+    GAME_TRACK = "./Assets/Music/GameMusic.ogg"
+    GAME_OVER_MUSIC = "./Assets/Music/GameOver.ogg"
+    current_track = None
+
+    @staticmethod
+    def play (track_path):
+        if Music.current_track != track_path:
+            pygame.mixer.music.load(track_path)
+            pygame.mixer.music.play(-1)
+            Music.current_track = track_path
+
+    @staticmethod
+    def stop():
+        pygame.mixer.music.stop()
+        Music.current_track = None
 
 async def main():
     running = True
@@ -295,10 +318,7 @@ async def main():
         if game_state.current_screen == "menu":
 
             #Handles music
-            if not Music.menu_music_playing:
-                Music.menu_music.play(-1)
-                Music.menu_music_playing = True
-            
+            Music.play(Music.MENU_TRACK)         
             menu.spawn_cloud()
             screen.fill(GameConfig.SKY_BLUE)
             menu.cloud_group.update()
@@ -362,12 +382,8 @@ async def main():
         if game_state.current_screen == "game_over":
             game_state.reset_score = True
             #Handles music
-            if not Music.game_over_music_playing:
-                Music.game_music.fadeout(1000)
-                Music.game_music_playing = False
-                Music.game_over_music.play(-1)
-                Music.game_over_music_playing = True
-                Music.menu_music_playing = True
+            
+            Music.play(Music.GAME_OVER_MUSIC)
             
             menu.spawn_cloud()
             screen.fill(GameConfig.SKY_BLUE)
@@ -391,18 +407,15 @@ async def main():
                     game_state.score = 0
                     click = False
                     game_state.current_screen = "playing"
-                    game_state.reset_score = True
-                    Music.game_over_music_playing = False
+                    game_state.reset_score = True  
             else:
                 screen.blit(game_over.play_again_button_scaled, game_over.play_again_button_rect)
             
             if game_over.main_menu_button_rect.collidepoint(pygame.mouse.get_pos()):
                 screen.blit(game_over.main_menu_button_hover, game_over.main_menu_button_hover_rect)
-                if click:
-                    Music.game_over_music_playing = False
+                if click: 
                     game_state.score = 0
                     click = False
-                    Music.game_over_music.fadeout(1000)
                     game_state.current_screen = "menu"
             else:
                 screen.blit(game_over.main_menu_button_scaled, game_over.main_menu_button_rect)
@@ -419,19 +432,20 @@ async def main():
                 game_state.last_time = pygame.time.get_ticks()
                 game_state.reset_score = False
 
-            #Turns of menu music gets time and refreshes screen
-            if not Music.game_music_playing:
-                Music.game_music.play(-1)
-                Music.game_music_playing = True
-                Music.menu_music.fadeout(1000)
-                Music.menu_music_playing = False
-                Music.game_over_music.fadeout(1000)
-                Music.menu_music_playing = False
+            Music.play(Music.GAME_TRACK)
+
+            offset_x = 0
+            offset_y = 0
+            if game_state.shake_intensity > 0:
+                offset_x = random.randint(-game_state.shake_intensity, game_state.shake_intensity)
+                offset_y = random.randint(-game_state.shake_intensity, game_state.shake_intensity)
+                game_state.shake_intensity -= 1 
 
             screen.fill(GameConfig.SKY_BLUE)
             current_time = pygame.time.get_ticks()
 
-            input_mgr.update_from_keyboard()
+            input_mgr.update_from_keyboard(game_state)
+            input_mgr.update_from_mediapipe(game_state)
 
             if input_mgr.move_left and input_mgr.move_right:
                 game_state.velocity = 1
@@ -478,7 +492,7 @@ async def main():
                 bg_img = game_state.grass_bg if current_tile_biome == 1 else game_state.dirt_bg
 
                 y_pos = (i -1) * game_state.bg_height + game_state.scroll
-                screen.blit(bg_img, (0, y_pos))
+                screen.blit(bg_img, (offset_x, y_pos + offset_y))
             mode_delay = game_state.get_mode(menu.mode)
             if current_time - last_obstacle_spawn_time > mode_delay:
                 current_top_biome = game_state.tile_map[0]
@@ -514,7 +528,6 @@ async def main():
             score_text_rect = score_text.get_rect()
             score_text_rect.topleft = (590 - score_text_rect.width, 5)
             screen.blit(score_text, score_text_rect)
-
         
         #Flips screen and limits fps
         pygame.display.flip()
