@@ -4,7 +4,7 @@
 [Horizon - Lock]
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- Easy to run python game where you steer a plane with your hands while dodging obstacles via a AI model
+- Easy to run python game where you steer a plane with the arrow keys
 
 - Web compatible
 
